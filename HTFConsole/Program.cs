@@ -378,7 +378,6 @@ string[,] convertMaze(string[][] maze)
     (int, int) start = (-1, -1);
     (int, int) end = (-1, -1);
 
-    // Find start ('S') and end ('E') positions
     for (int i = 0; i < rows; i++)
     {
         for (int j = 0; j < cols; j++)
@@ -399,7 +398,6 @@ string[,] convertMaze(string[][] maze)
         throw new Exception("Maze must contain both 'S' (start) and 'E' (end).");
     }
 
-    // BFS to calculate shortest path
     return BFS(maze, start, end);
 }
 
@@ -407,8 +405,8 @@ string[,] convertMaze(string[][] maze)
 
 static int BFS(string[,] maze, (int row, int col) start, (int row, int col) end)
 {
-    int[] dRow = { -1, 1, 0, 0 }; // Row adjustments
-    int[] dCol = { 0, 0, -1, 1 }; // Column adjustments
+    int[] dRow = { -1, 1, 0, 0 }; 
+    int[] dCol = { 0, 0, -1, 1 }; 
 
     int rows = maze.GetLength(0);
     int cols = maze.GetLength(1);
@@ -416,7 +414,6 @@ static int BFS(string[,] maze, (int row, int col) start, (int row, int col) end)
     bool[,] visited = new bool[rows, cols];
     Queue<(int row, int col, int steps)> queue = new Queue<(int, int, int)>();
 
-    // Start BFS from 'S'
     queue.Enqueue((start.row, start.col, 0));
     visited[start.row, start.col] = true;
 
@@ -424,19 +421,16 @@ static int BFS(string[,] maze, (int row, int col) start, (int row, int col) end)
     {
         var (currentRow, currentCol, steps) = queue.Dequeue();
 
-        // If we reach the end ('E'), return the steps
         if ((currentRow, currentCol) == end)
         {
             return steps;
         }
 
-        // Explore all four possible directions
         for (int i = 0; i < 4; i++)
         {
             int newRow = currentRow + dRow[i];
             int newCol = currentCol + dCol[i];
 
-            // Check bounds and whether the cell is valid
             if (newRow >= 0 && newRow < rows &&
                 newCol >= 0 && newCol < cols &&
                 !visited[newRow, newCol] &&
@@ -449,8 +443,67 @@ static int BFS(string[,] maze, (int row, int col) start, (int row, int col) end)
         }
     }
 
-    // If we cannot reach 'E'
     return -1;
+}
+
+
+using (HttpClient client = new HttpClient())
+{
+    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+    var responseStart = await client.GetAsync($"{url}/b/medium/start");
+    {
+        var response = await client.GetAsync($"{url}/b/medium/sample");
+
+
+        if (response.IsSuccessStatusCode)
+        {
+
+            string jsonResponse = await response.Content.ReadAsStringAsync();
+            var data = JsonConvert.DeserializeObject<APIResponse>(jsonResponse);
+
+            var result = CalculateArrival(data);
+            Console.WriteLine(result);
+
+            var postResponse = await client.PostAsJsonAsync($"{url}/b/medium/sample", result);
+            if (postResponse.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"{await postResponse.Content.ReadAsStringAsync()}");
+            }
+            else
+            {
+                Console.WriteLine($"{await postResponse.Content.ReadAsStringAsync()}");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"Failed to get data: {response.StatusCode}");
+        }
+    }
+}
+
+static string CalculateArrival(APIResponse data)
+{
+    DateTime sendDateTime = DateTime.Parse(data.SendDateTime);
+
+    double travelTimeMinutes = data.Distance / data.TravelSpeed;
+
+    double dayLengthMinutes = data.DayLength * 60;
+
+    int fullDays = (int)(travelTimeMinutes / dayLengthMinutes);
+    double remainingMinutes = travelTimeMinutes % dayLengthMinutes;
+
+    DateTime arrivalDateTime = sendDateTime.AddDays(fullDays).AddMinutes(remainingMinutes);
+
+    return arrivalDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ");
+}
+
+
+public class APIResponse
+{
+    public string SendDateTime { get; set; }
+    public int TravelSpeed { get; set; }
+    public int Distance { get; set; }
+    public int DayLength { get; set; }
 }
 
 
